@@ -5,9 +5,9 @@
  *      Author: Benson
  */
 
-#include "Sensor.h"
 #include "CAN_Driver.h"
 #include "EEPROM_Driver_EXT.h"
+#include "sensor.h"
 
 
 //initialization
@@ -18,11 +18,38 @@ void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1){
 
 }
 
+/* Writing to Sensor */
+void write_EEPROM(struct_Sensor  sensor, S08 *device){
+	uint32_t address = sensor.start_address;
+
+
+
+	for(int i = 0; i < 32; i++){
+		if(S_Write_EEPROM(device, address, sensor.x_values[i]) != HAL_OK )
+			Error_Handler();
+		address += 0x10;
+	}
+	//maybe add the end address here to track
+
+	address = S08_EEPROM_START_ADDRESS_Y;
+	for(int i = 0; i < 32; i++){
+		if(S_Write_EEPROM(device, address, sensor.y_values[i]) != HAL_OK)
+			Error_Handler();
+		address += 0x10;
+	}
+
+}
+
+
+//create a separate function you when want to change a specific grid in the EEPROM after the if statement for the matching ID
+
+
 /* low level functions */
 HAL_StatusTypeDef S_Write_EEPROM(S08 *device, uint32_t dest_address, uint8_t data){
 
 	uint8_t temp[3] = {0};
 	uint8_t id = 0;
+	HAL_StatusTypeDef error_check;
 
 	id = ((dest_address >> 10) << 1) | S08_DEV_ID_ADDR_W; // A16 for 17 - bit to get into one byte
 
@@ -30,7 +57,13 @@ HAL_StatusTypeDef S_Write_EEPROM(S08 *device, uint32_t dest_address, uint8_t dat
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 	temp[2] = data;
 
-	return HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 3, HAL_MAX_DELAY);
+	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);	//make sure the device is ready to communicate before transmitting
+
+	error_check = HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 3, HAL_MAX_DELAY);
+
+
+
+	return error_check;
 }
 
 HAL_StatusTypeDef S_Read_EEPROM(S08 *device, uint32_t dest_address, uint8_t *data){
@@ -52,116 +85,4 @@ HAL_StatusTypeDef S_Read_EEPROM(S08 *device, uint32_t dest_address, uint8_t *dat
 }
 
 
-/*	new eeprom function with integration v1
- * void S_Write_EEPROM(SO8 *device, uint32_t dest_address, uint8_t data){
- * 		uint16_t values[16];
- *
- *
- *
- * }
- */
 
-
-//void read_D_EEPROM (struct_D_Sensor *Sensor)
-//{
-//    uint16_t address = Sensor->Start_Address;
-//    Sensor->CON_mode = read_Word(address);
-//    address += 2;
-//    Sensor->NumbTeeth = read_Word(address);
-//    address += 2;
-//    Sensor->radius = read_Word(address);
-//    address += 2;
-//    Sensor->SensorIDchar = read_Word(address);
-//    address += 2;
-//    Sensor->SensorIDchar = (((uint32_t)read_Word(address)) << 16);
-//}
-
-
-//OLD CSI FUNCTIONS
-
-//need to recreate this function
-/*
-void read_D_EEPROM (struct_D_Sensor *Sensor)
-{
-    uint16_t address = Sensor->Start_Address;
-    Sensor->CON_mode = read_Word(address);
-    address += 2;
-    Sensor->NumbTeeth = read_Word(address);
-    address += 2;
-    Sensor->radius = read_Word(address);
-    address += 2;
-    Sensor->SensorIDchar = read_Word(address);
-    address += 2;
-    Sensor->SensorIDchar = (((uint32_t)read_Word(address)) << 16);
-}
-
-
-void write_EEPROM (struct_Sensor* Sensor){
-
-	 uint16_t values[16];
-	    uint8_t i,j;
-	    uint16_t address = Sensor->Start_Address;
-
-	    // 1st 16 xValues to EEProm
-	    for(i = 0; i < 16; i++)
-	    {
-	        values[i] = Sensor->x_Values[i];
-	    }
-	    write_Block(address, values); // write
-	    address += 32;                // increment WriteAddress
-
-	    // 2nd 16 xValues to EEProm
-	    for(i = 0; i < 16; i++)
-	    {
-	        values[i] = Sensor->x_Values[i+16];
-	    }
-	    write_Block(address, values); // write
-	    address += 32;                // increment WriteAddress
-
-	    j = 0;
-	    for(i = 0; i < 8; i++)
-	    {
-	        values[j++] = (Sensor->y_Values[i]);   //low bits
-	        values[j++] = (Sensor->y_Values[i] >> 16); //high bits
-	    }
-	    write_Block(address, values);
-	    address += 32;
-	    j = 0;
-
-	    for(i = 8; i < 16; i++)
-	    {
-	        values[j++] = (Sensor->y_Values[i]);   //low bits
-	        values[j++] = (Sensor->y_Values[i] >> 16); //high bits
-	    }
-	    write_Block(address, values);
-	    address += 32;
-	    j = 0;
-	    for(i = 16; i < 24; i++)
-	    {
-	        values[j++] = (Sensor->y_Values[i]);   //low bits
-	        values[j++] = (Sensor->y_Values[i] >> 16); //high bits
-	    }
-	    write_Block(address, values);
-	    address += 32;
-	    j = 0;
-
-	    for(i = 24; i < 32; i++)
-	    {
-	        values[j++] = (Sensor->y_Values[i]);   //low bits
-	        values[j++] = (Sensor->y_Values[i] >> 16); //high bits
-	    }
-	    write_Block(address, values);
-	    address += 32;
-
-	    values[0] = (Sensor->offset);
-	    values[1] = (Sensor->faktor);
-	    values[2] = (Sensor->CON_mode);
-	    values[3] = Sensor->SensorIDchar;
-	    values[4] = (Sensor->SensorIDchar)>>16;
-	    for(i = 5; i < 16; i++)
-	    {
-	        values[i] = 0;
-	    }
-	    write_Block(address, values);
-	}
-*/

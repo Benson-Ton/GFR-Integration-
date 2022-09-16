@@ -24,10 +24,9 @@
 #include <string.h>
 #include <stdio.h>
 #include "global.h"
-#include "FIFO.h"
 #include "CAN_Driver.h"
 #include "EEPROM_Driver_EXT.h"
-#include "calibration.h"
+#include "sensor.h"
 //#include "CAN_Driver.h"
 /* USER CODE END Includes */
 
@@ -158,12 +157,12 @@ int main(void)
   TxHeader.StdId = 0x100; // set the standard identifier to 256 (Field Nodes cannot access anything higher than 255 for their addresses)
 */
 
-
-
   HAL_CAN_Start(&hcan1); // start communicating with CANBUS and cant reconfigure CAN settings
 
   /*ENABLE INTERRUPTS*/
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+
+
 
 
   //from can_driver.c
@@ -172,8 +171,7 @@ int main(void)
  //test.CAN_Word1 = 0x10;
  test.CAN_Word3 = 0X10;
  test.CAN_Word5 = 'c';
- //TxData[0] = 0xff;
- //TxData[1] = 0x01;
+
  send_CAN(test);
 
    // TxData[0] = 0x01;
@@ -193,15 +191,54 @@ uint16_t converted_val;
 //struct_CAN_Message msg = {0};
 S08 device;
 char adc_msg[15];
-uint8_t temp_ADDR = 0x20;
+uint8_t temp_ADDR = 0x00;
 uint8_t data = 0x15;
 HAL_StatusTypeDef error_check;
 
 initialize_EEPROM(&device, &hi2c1);
 
+
+//initialize Sensor
+struct_Sensor sensor = {0};
+init_sensor(&sensor);
+
+write_EEPROM(sensor, &device);
+HAL_Delay(100);
+
+//S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
+//sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
+//HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
 //set_CSI_Config_EEPROM(device, msg.CAN_ID, 0);
 
 //uint8_t ID = get_CSI_Config_EEPROM(device, 0);
+
+
+for(int i = 0; i < 32; i++){
+
+if(error_check != HAL_OK){
+	  strcpy((char*)uart_buf, " ERROR with sending \r\n");
+}
+else{
+	  HAL_Delay(10); // need time for status to update
+	  error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
+	  temp_ADDR += 0x10;
+//	 error_check = HAL_I2C_Master_Receive(&hi2c1, S08_DEV_ID_ADDR_R, (uint8_t *)i2c_buffer, 1, HAL_MAX_DELAY);
+	  if(error_check != HAL_OK){
+		  strcpy((char*)uart_buf, " ERROR with receive \r\n");
+	  }
+	  else{
+		  //sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
+		  sprintf(uart_buf, "EEPROM Response: %u \r\n", i2c_buffer[0]);
+	  }
+}
+
+	  //print to serial monitor
+HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
+
+HAL_Delay(1000);
+}
+
+
 
 
   /* USER CODE END 2 */
@@ -211,27 +248,10 @@ initialize_EEPROM(&device, &hi2c1);
   while (1)
   {
 
-	  //  HAL_GPIO_TogglePin(GPIOx, GPIO_Pin); for timing?
 
-	  	  data += 0x10;
+	 // error_check = S_Write_EEPROM(&device, temp_ADDR, data);
 
-	  //obtaining ADC values
-	  HAL_ADC_Start(&hadc1);
-	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	  raw = HAL_ADC_GetValue(&hadc1);
-
-	  //  HAL_GPIO_TogglePin(GPIOx, GPIO_Pin);
-
-
-	  converted_val =  (double) ADC_convert(raw);
-	  //convert
-	  //sprintf(adc_msg, "%hu\r\n",raw);
-
-
-	 // sprintf(adc_msg, "%hu\r\n",converted_val);
-
-
-	  error_check = S_Write_EEPROM(&device, temp_ADDR, data);
+/*
 
 	  if(error_check != HAL_OK){
 		  strcpy((char*)uart_buf, " ERROR with sending \r\n");
@@ -239,6 +259,7 @@ initialize_EEPROM(&device, &hi2c1);
 	  else{
 		  HAL_Delay(10); // need time for status to update
 	  	  error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
+	  	  temp_ADDR += 0x10;
 	  //	 error_check = HAL_I2C_Master_Receive(&hi2c1, S08_DEV_ID_ADDR_R, (uint8_t *)i2c_buffer, 1, HAL_MAX_DELAY);
 	  	  if(error_check != HAL_OK){
 	  		  strcpy((char*)uart_buf, " ERROR with receive \r\n");
@@ -247,22 +268,12 @@ initialize_EEPROM(&device, &hi2c1);
 	  		  sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
 	  	  }
 	  }
+
 		  //print to serial monitor
 	HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
 
-//////
 
-
-//	  S08 device;
-//	HAL_StatusTypeDef error_check;
-//	HAL_StatusTypeDef erase_check;
-
-
-
-	//CSI_set_Config( msg, converted_val);
-
-
-
+*/
 	  //send through CAN after ADC values are parsed
 
 	  //HAL_UART_Transmit(&huart3, (uint8_t *)adc_msg, strlen(adc_msg), HAL_MAX_DELAY);

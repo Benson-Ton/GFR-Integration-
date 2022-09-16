@@ -9,7 +9,7 @@
  **                 Oscillator		                  **
  *******************************************************/
 /* Microcontroller MIPs (FCY) */
-//#define SYSCLOCK			80000000UL
+//#define SYSCLOCK			80,000,000UL
 //#define FCY                 SYSCLOCK/4
 
 /*******************************************************
@@ -76,7 +76,7 @@ typedef unsigned long long int uint64;
 extern uint16 CSI_config_ID; //need this for CAN ID defines
 
 /* Define CSI_ID 0x0-0xF*/
-#define CSI_ID 1 //hardware ID
+#define CSI_ID 1 				//hardware ID **
 
 // CSI CAN IDs TX
 #define ID_STATUS       ((0x600) | (0x0F0&(CSI_config_ID<<4)))
@@ -84,10 +84,10 @@ extern uint16 CSI_config_ID; //need this for CAN ID defines
 #define ID_ANA_VAL34    ((0x602) | (0x0F0&(CSI_config_ID<<4)))   //send Analog Value 3 and 4
 #define ID_DIG_VAL1     ((0x603) | (0x0F0&(CSI_config_ID<<4)))    //send Digital Value
 #define ID_ERROR        ((0x606) | (0x0F0&(CSI_config_ID<<4)))    //error message
-#define ID_CSI_LOAD     ((0x607) | (0x0F0&(CSI_config_ID<<4)))      //send  the acutal CSI Load
+#define ID_CSI_LOAD     ((0x607) | (0x0F0&(CSI_config_ID<<4)))      //send  the actual CSI Load
 
 #define ID_REQ_VOLTS    (0x608 | (CSI_ID<<4))   // actual Voltage of a channel to the dash manager
-#define ID_CONFIG_CSI   (0x609 | (CSI_ID<<4))      //send the config from the CSI to the dash manager
+#define ID_CONFIG_CSI   (0x609 | (CSI_ID<<4))      //send the config from the CSI to the dash manager **
 
 // CSI CAN IDs RX
 #define ID_GET_config   0x700    //Dash Manager sends a new config to the CSI

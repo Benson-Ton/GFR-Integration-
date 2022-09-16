@@ -7,10 +7,12 @@
 #ifndef INC_EEPROM_DRIVER_EXT_H_
 #define INC_EEPROM_DRIVER_EXT_H_
 
-
+#include "sensor.h"
 #include "global.h"
-#include "Sensor.h"
 #include "stm32f7xx_hal.h"
+
+
+
 
 //STM32: M95M01-DF-M95M01-R EEPROM (SPI)
 
@@ -25,6 +27,7 @@
 #define S08_DEV_ID_ADDR_W		0xAC		//E2 = E1 = 1
 #define S08_DEV_ID_ADDR_R		0xAD		//E2 = E1 = 1
 
+
 typedef struct{
 
 	I2C_HandleTypeDef *i2cHandle1;
@@ -35,6 +38,7 @@ typedef struct{
 
 } S08;
 
+void write_EEPROM(struct_Sensor sensor, S08 *device);
 
 //initialization
 void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1);
@@ -50,9 +54,7 @@ HAL_StatusTypeDef S_Write_EEPROM(S08 *device, uint32_t dest_address, uint8_t dat
 
 
 
-// read and write commands
-void write_EEPROM (struct_Sensor* Sensor); //uint16 Start_Address, uint16* x_Values, sint32* y_Values, sint32 offset, sint32 faktor, uint8 CON_mode);
-void read_EEPROM (struct_Sensor* Sensor);
+
 
 
 

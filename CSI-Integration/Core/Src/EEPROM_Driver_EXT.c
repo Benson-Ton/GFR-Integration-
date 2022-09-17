@@ -18,6 +18,67 @@ void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1){
 
 }
 
+
+/*
+ * The Page Write mode allows up to 256 byte to be written in a single Write cycle, provided
+ * that they are all located in the same page in the memory: that is, the most significant
+ * memory address bits, b16-b8, are the same.
+ * */
+HAL_StatusTypeDef Write_Page_EEPROM(S08 *device, uint32_t dest_address, uint16_t data){
+
+	uint16_t upper_byte = 0, lower_byte = 0;
+	uint8_t temp[4] = {0};
+	uint8_t id = 0;
+	HAL_StatusTypeDef error_check;
+
+	id = ((dest_address >> 10) << 1) | S08_DEV_ID_ADDR_W; // A16 for 17 - bit to get into one byte
+
+	upper_byte = (data & 0xFF00) >> 8;	//need to keep it size of 1 byte
+	lower_byte = data & 0x00FF;
+
+	temp[0] = dest_address >> 8; // most significant byte| A15:A8
+	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
+	temp[2] = upper_byte;
+	temp[3] = lower_byte;
+
+	//maybe add another temp[3] for 16 bits when parsing data
+
+	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);	//make sure the device is ready to communicate before transmitting
+
+	error_check = HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 4, HAL_MAX_DELAY);
+
+	return error_check;
+
+
+}
+
+
+uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address){
+
+
+	uint8_t temp[2] = {0};
+	uint8_t id = 0;
+	static uint8_t data[2] = {0};
+
+	id = ((dest_address >> 10) << 1) | S08_DEV_ID_ADDR_R; // A16 for 17 - bit to get into one byte
+
+	temp[0] = dest_address >> 8; // most significant byte| A15:A8
+	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
+
+	if(HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 2, HAL_MAX_DELAY) != HAL_OK){
+		Error_Handler();
+	}
+
+
+
+	if(HAL_I2C_Master_Receive(device->i2cHandle1, id, data, 2, HAL_MAX_DELAY) != HAL_OK){
+		Error_Handler();
+	}
+
+	return data;
+}
+
+
 /* Writing to Sensor */
 void write_EEPROM(struct_Sensor  sensor, S08 *device){
 	uint32_t address = sensor.start_address;
@@ -56,6 +117,8 @@ HAL_StatusTypeDef S_Write_EEPROM(S08 *device, uint32_t dest_address, uint8_t dat
 	temp[0] = dest_address >> 8; // most significant byte| A15:A8
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 	temp[2] = data;
+
+	//maybe add another temp[3] for 16 bits when parsing data
 
 	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);	//make sure the device is ready to communicate before transmitting
 

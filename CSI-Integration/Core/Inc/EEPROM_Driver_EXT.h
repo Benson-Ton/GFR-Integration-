@@ -39,6 +39,8 @@ typedef struct{
 } S08;
 
 void write_EEPROM(struct_Sensor sensor, S08 *device);
+HAL_StatusTypeDef Write_Page_EEPROM(S08 *device, uint32_t dest_address, uint16_t data);
+uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address);
 
 //initialization
 void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1);
@@ -46,6 +48,8 @@ void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1);
 //new read and write functions
 HAL_StatusTypeDef S_Read_EEPROM(S08 *device, uint32_t dest_address, uint8_t *data);
 HAL_StatusTypeDef S_Write_EEPROM(S08 *device, uint32_t dest_address, uint8_t data);
+
+
 
 
 //low level functions

@@ -103,6 +103,7 @@ uint8_t count = 0;
 //testing for EEPROM
 char uart_buf[50] = {0};
 char i2c_buffer[20];
+uint16_t temp_buffer[10];
 
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
@@ -192,8 +193,7 @@ uint16_t converted_val;
 S08 device;
 char adc_msg[15];
 uint8_t temp_ADDR = 0x00;
-uint8_t data = 0x15;
-HAL_StatusTypeDef error_check;
+HAL_StatusTypeDef error_check = HAL_OK;
 
 initialize_EEPROM(&device, &hi2c1);
 
@@ -202,7 +202,8 @@ initialize_EEPROM(&device, &hi2c1);
 struct_Sensor sensor = {0};
 init_sensor(&sensor);
 
-write_EEPROM(sensor, &device);
+//write_EEPROM(sensor, &device);
+error_check = Write_Page_EEPROM(&device, temp_ADDR, 309);
 HAL_Delay(100);
 
 //S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
@@ -213,30 +214,40 @@ HAL_Delay(100);
 //uint8_t ID = get_CSI_Config_EEPROM(device, 0);
 
 
-for(int i = 0; i < 32; i++){
+//for(int i = 0; i < 32; i++){
 
 if(error_check != HAL_OK){
 	  strcpy((char*)uart_buf, " ERROR with sending \r\n");
 }
 else{
 	  HAL_Delay(10); // need time for status to update
-	  error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
-	  temp_ADDR += 0x10;
+
+	  uint8_t * p =  Read_Page_EEPROM(&device, temp_ADDR);
+	  temp_buffer[0] = *p << 8;
+	  temp_buffer[1] = *(p+1);
+	  temp_buffer[3] = temp_buffer[0] | temp_buffer[1];
+
+	  // error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
+	  //temp_ADDR++;
+	  //temp_ADDR += 0x10;
 //	 error_check = HAL_I2C_Master_Receive(&hi2c1, S08_DEV_ID_ADDR_R, (uint8_t *)i2c_buffer, 1, HAL_MAX_DELAY);
 	  if(error_check != HAL_OK){
 		  strcpy((char*)uart_buf, " ERROR with receive \r\n");
 	  }
 	  else{
 		  //sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
-		  sprintf(uart_buf, "EEPROM Response: %u \r\n", i2c_buffer[0]);
+		  sprintf(uart_buf, "First Byte[2]: %d | Second Byte[3]: %d | F: %d\r\n ", temp_buffer[0], temp_buffer[1], temp_buffer[3]);
+
 	  }
 }
+
+
 
 	  //print to serial monitor
 HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
 
 HAL_Delay(1000);
-}
+//}
 
 
 

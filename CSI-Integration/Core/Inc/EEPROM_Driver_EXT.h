@@ -38,7 +38,9 @@ typedef struct{
 
 } S08;
 
-void write_EEPROM(struct_Sensor sensor, S08 *device);
+void write_ALL_EEPROM(struct_Sensor sensor, S08 *device);
+void read_ALL_EEPROM(struct_Sensor * sensor, S08 *device);
+
 HAL_StatusTypeDef Write_Page_EEPROM(S08 *device, uint32_t dest_address, uint16_t data);
 uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address);
 

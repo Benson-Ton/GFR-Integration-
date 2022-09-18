@@ -23,6 +23,8 @@ void initialize_EEPROM(S08 * device, I2C_HandleTypeDef *i2cHandle1){
  * The Page Write mode allows up to 256 byte to be written in a single Write cycle, provided
  * that they are all located in the same page in the memory: that is, the most significant
  * memory address bits, b16-b8, are the same.
+ *
+ * Note: You can use this function to overwrite a specific address
  * */
 HAL_StatusTypeDef Write_Page_EEPROM(S08 *device, uint32_t dest_address, uint16_t data){
 
@@ -33,18 +35,21 @@ HAL_StatusTypeDef Write_Page_EEPROM(S08 *device, uint32_t dest_address, uint16_t
 
 	id = ((dest_address >> 10) << 1) | S08_DEV_ID_ADDR_W; // A16 for 17 - bit to get into one byte
 
+	//parsing the data to keep it within 1 byte
 	upper_byte = (data & 0xFF00) >> 8;	//need to keep it size of 1 byte
 	lower_byte = data & 0x00FF;
 
+	//sending 4 bytes
 	temp[0] = dest_address >> 8; // most significant byte| A15:A8
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 	temp[2] = upper_byte;
 	temp[3] = lower_byte;
 
-	//maybe add another temp[3] for 16 bits when parsing data
 
-	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);	//make sure the device is ready to communicate before transmitting
+	//make sure the device is ready to communicate before transmitting
+	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);
 
+	//transmit data
 	error_check = HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 4, HAL_MAX_DELAY);
 
 	return error_check;
@@ -65,39 +70,87 @@ uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address){
 	temp[0] = dest_address >> 8; // most significant byte| A15:A8
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 
+	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);
+
 	if(HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 2, HAL_MAX_DELAY) != HAL_OK){
 		Error_Handler();
 	}
 
-
+	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);
 
 	if(HAL_I2C_Master_Receive(device->i2cHandle1, id, data, 2, HAL_MAX_DELAY) != HAL_OK){
 		Error_Handler();
 	}
+
 
 	return data;
 }
 
 
 /* Writing to Sensor */
-void write_EEPROM(struct_Sensor  sensor, S08 *device){
+void write_ALL_EEPROM(struct_Sensor  sensor, S08 *device){
+
 	uint32_t address = sensor.start_address;
 
 
-
 	for(int i = 0; i < 32; i++){
-		if(S_Write_EEPROM(device, address, sensor.x_values[i]) != HAL_OK )
+		if(Write_Page_EEPROM(device, address, sensor.x_values[i]) != HAL_OK )
 			Error_Handler();
-		address += 0x10;
+		//address += 0x05;
+		address += 2;
 	}
 	//maybe add the end address here to track
 
-	address = S08_EEPROM_START_ADDRESS_Y;
+	//address = sensor.end_address; //starting at 0x180
+	address += 5;
+
 	for(int i = 0; i < 32; i++){
-		if(S_Write_EEPROM(device, address, sensor.y_values[i]) != HAL_OK)
+		if(Write_Page_EEPROM(device, address, sensor.y_values[i]) != HAL_OK)
 			Error_Handler();
-		address += 0x10;
+		//address += 0x05;
+		address += 2;
 	}
+
+}
+/*
+ *  Reading from EEPROM and updating the sensor struct's x and y values
+ * */
+void read_ALL_EEPROM(struct_Sensor * sensor, S08 *device){
+
+	  uint32_t address = sensor->start_address;
+	  uint8_t *p;
+	  uint32_t temp_buffer[3];
+
+
+	  for(int i = 0; i < 32; i++)
+	  {
+	  	  p =  Read_Page_EEPROM(device, address);
+	  	  temp_buffer[0] = *p << 8; //upper byte
+	  	  temp_buffer[1] = *(p+1);	//lower byte
+	  	  temp_buffer[3] = temp_buffer[0] | temp_buffer[1]; //result
+
+	  	sensor->x_values[i] = temp_buffer[3];
+	  	//address += 0x05;
+	  	address += 2;
+	  }
+
+	  //address = sensor->end_address; //starting at 0x180
+	  address += 5;
+
+	  for(int i = 0; i < 32; i++)
+	  {
+	  	  p =  Read_Page_EEPROM(device, address);
+	  	  temp_buffer[0] = *p << 8; //upper byte
+	  	  temp_buffer[1] = *(p+1);	//lower byte
+	  	  temp_buffer[3] = temp_buffer[0] | temp_buffer[1]; //result
+
+	  	sensor->y_values[i] = temp_buffer[3];
+	  	//address += 0x05;
+	  	address += 2;
+	  }
+
+
+
 
 }
 

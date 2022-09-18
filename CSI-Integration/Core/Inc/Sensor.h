@@ -9,12 +9,14 @@
 #define INC_SENSOR_H_
 
 #include "main.h"
+#include <string.h>
+#include <stdio.h>
 
 
 // MACROS
 
 #define S08_EEPROM_START_ADDRESS_X 0x00
-#define S08_EEPROM_START_ADDRESS_Y 0x200
+#define S08_EEPROM_START_ADDRESS_Y 0x180
 
 
 
@@ -30,6 +32,6 @@ typedef struct{
 
 
 void init_sensor(struct_Sensor *sensor);
-
+void serial_print_sensor_values(struct_Sensor sensor);
 
 #endif /* INC_SENSOR_H_ */

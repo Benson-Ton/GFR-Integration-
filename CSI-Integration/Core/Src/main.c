@@ -185,14 +185,15 @@ int main(void)
    // HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox); //Add a message to the first free Tx mailbox and activate the corresponding transmission request
 
 //adc variables
-uint16_t raw;
-uint16_t converted_val;
+//uint16_t raw;
+//uint16_t converted_val;
+//char adc_msg[15];
 
 //CAN and EEPROM variables
 //struct_CAN_Message msg = {0};
 S08 device;
-char adc_msg[15];
-uint8_t temp_ADDR = 0x00;
+
+uint16_t temp_ADDR = 0x00;
 HAL_StatusTypeDef error_check = HAL_OK;
 
 initialize_EEPROM(&device, &hi2c1);
@@ -200,32 +201,35 @@ initialize_EEPROM(&device, &hi2c1);
 
 //initialize Sensor
 struct_Sensor sensor = {0};
-init_sensor(&sensor);
-
-//write_EEPROM(sensor, &device);
-error_check = Write_Page_EEPROM(&device, temp_ADDR, 309);
-HAL_Delay(100);
-
-//S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
-//sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
-//HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
-//set_CSI_Config_EEPROM(device, msg.CAN_ID, 0);
-
-//uint8_t ID = get_CSI_Config_EEPROM(device, 0);
+//init_sensor(&sensor); //assigning the default values for sensors to the EEPROM
 
 
-//for(int i = 0; i < 32; i++){
+
+//write_ALL_EEPROM(sensor, &device);
+read_ALL_EEPROM(&sensor, &device);
+serial_print_sensor_values(sensor);
+
+
+
+
+/*
+
+uint8_t *p;
+temp_ADDR = 0x180;
+//write_ALL_EEPROM(sensor, &device);
+Write_Page_EEPROM(&device, temp_ADDR, sensor.y_values[0]);
 
 if(error_check != HAL_OK){
 	  strcpy((char*)uart_buf, " ERROR with sending \r\n");
 }
 else{
 	  HAL_Delay(10); // need time for status to update
-
-	  uint8_t * p =  Read_Page_EEPROM(&device, temp_ADDR);
-	  temp_buffer[0] = *p << 8;
-	  temp_buffer[1] = *(p+1);
+	  temp_ADDR = 0x180;
+	  p =  Read_Page_EEPROM(&device, temp_ADDR);
+	  temp_buffer[0] = *p << 8; //upper byte
+	  temp_buffer[1] = *(p+1);	//lower byte
 	  temp_buffer[3] = temp_buffer[0] | temp_buffer[1];
+
 
 	  // error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
 	  //temp_ADDR++;
@@ -246,9 +250,8 @@ else{
 	  //print to serial monitor
 HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
 
-HAL_Delay(1000);
-//}
 
+*/
 
 
 

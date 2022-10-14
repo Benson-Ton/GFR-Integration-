@@ -18,16 +18,17 @@ void init_sensor(struct_Sensor *sensor){
 	sensor->end_address = S08_EEPROM_START_ADDRESS_Y;
 	sensor->voltage = 0;
 	sensor->physValue = 0;
+	sensor->prev_index = 0;
 
-	//setting the x values increments of 103mV up to 3296mV or approx 3.3v
+	//setting the x values increments of 108mV up to 3348mV or approx 3.3v
 	for(int i = 0; i < 32; i++){
 		sensor->x_values[i] = count;
-		count += 106;
+		count += 108;
 	}
 
 	count = 0;	//reset the count for y intervals
 
-	//setting the y values in increments of 3 degrees Celsius up to 96 C
+	//setting the y values in increments of 3 degrees Celsius up to 93 C
 	for(int i = 0; i < 32; i++){
 		sensor->y_values[i] = count;
 		count += 3;

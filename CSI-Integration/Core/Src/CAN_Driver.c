@@ -34,16 +34,16 @@ void send_CAN(struct_CAN_Message Msg)
     TxHeader.IDE = CAN_ID_STD; // set the identifier to standard | 0x00
     TxHeader.RTR = CAN_RTR_DATA; // set to allow for remote transmission requests | it is set for data frame
 
-    TxHeader.StdId = (Msg.CAN_ID & 0x03F) | ((Msg.CAN_ID & 0x7C0) >> 6) ; //set the standard identifier to 256 (Field Nodes cannot access anything higher than 255 for their addresses)
+    TxHeader.StdId = Msg.CAN_ID; //set the standard identifier to 256 (Field Nodes cannot access anything higher than 255 for their addresses)
 
-    TxData[0] = Msg.CAN_Word1;
-    TxData[1] = Msg.CAN_Word2;
-    TxData[2] = Msg.CAN_Word3;
-    TxData[3] = Msg.CAN_Word4;
-    TxData[4] = Msg.CAN_Word5;
-    TxData[5] = Msg.CAN_Word6;
-    TxData[6] = Msg.CAN_Word7;
-    TxData[7] = Msg.CAN_Word8;
+    TxData[0] = Msg.CAN_Byte1;
+    TxData[1] = Msg.CAN_Byte2;
+    TxData[2] = Msg.CAN_Byte3;
+    TxData[3] = Msg.CAN_Byte4;
+    TxData[4] = Msg.CAN_Byte5;
+    TxData[5] = Msg.CAN_Byte6;
+    TxData[6] = Msg.CAN_Byte7;
+    TxData[7] = Msg.CAN_Byte8;
 
     if(HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox) != HAL_OK ){
     	Error_Handler();

@@ -27,6 +27,7 @@
 #include "CAN_Driver.h"
 #include "EEPROM_Driver_EXT.h"
 #include "sensor.h"
+#include "ADC_Driver.h"
 //#include "CAN_Driver.h"
 /* USER CODE END Includes */
 
@@ -98,6 +99,9 @@ uint32_t TxMailbox = 0x00;
 uint8_t TxData[8] = {0};
 uint8_t RxData[8] = {0};
 
+uint8_t new_index = -1;
+uint8_t new_x_value = 0, new_y_value = 0;
+
 uint8_t count = 0;
 
 //testing for EEPROM
@@ -109,7 +113,35 @@ uint16_t temp_buffer[10];
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 {
 	HAL_CAN_GetRxMessage(hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
-	count++;
+
+uint8_t x_value_byte1 = 0, x_value_byte2 = 0;
+uint8_t y_value_byte1 = 0, y_value_byte2 = 0;
+
+
+
+	if(RxHeader.StdId == 0x99 ){
+
+
+		x_value_byte1 = RxData[1] << 8; //upper byte
+		x_value_byte2 = RxData[2]; //lower byte
+
+		y_value_byte1 = RxData[3] << 8; //upper byte
+		y_value_byte2 = RxData[4]; // lower byte
+
+
+		new_index = RxData[0];
+
+		new_x_value = x_value_byte1 & x_value_byte2;
+		new_y_value = y_value_byte1 & y_value_byte2;
+
+		count++;
+
+	}
+	//no changes
+	else{
+		new_index = -1;
+	}
+	//count++;
 }//test code for loopback mode
 
 
@@ -166,14 +198,14 @@ int main(void)
 
 
 
-  //from can_driver.c
- struct_CAN_Message test = {0};
- test.CAN_ID = 0x01;
- //test.CAN_Word1 = 0x10;
- test.CAN_Word3 = 0X10;
- test.CAN_Word5 = 'c';
-
- send_CAN(test);
+//  //from can_driver.c
+// struct_CAN_Message test = {0};
+// test.CAN_ID = 0x01;
+// //test.CAN_Word1 = 0x10;
+// test.CAN_Word3 = 0X10;
+// test.CAN_Word5 = 'c';
+//
+// send_CAN(test);
 
    // TxData[0] = 0x01;
    // TxData[1] = 0x02;
@@ -201,7 +233,7 @@ initialize_EEPROM(&device, &hi2c1);
 
 //initialize Sensor
 struct_Sensor sensor = {0};
-//init_sensor(&sensor); //assigning the default values for sensors to the EEPROM
+init_sensor(&sensor); //assigning the default values for sensors to the EEPROM
 
 
 
@@ -210,50 +242,21 @@ read_ALL_EEPROM(&sensor, &device);
 serial_print_sensor_values(sensor);
 
 
+//interpolation function needs to be written
 
+//ADC variables
+	char adc_msg[100];
+	int raw;
+	int convert;
+	sint32 physical = 0;
 
-/*
-
-uint8_t *p;
-temp_ADDR = 0x180;
-//write_ALL_EEPROM(sensor, &device);
-Write_Page_EEPROM(&device, temp_ADDR, sensor.y_values[0]);
-
-if(error_check != HAL_OK){
-	  strcpy((char*)uart_buf, " ERROR with sending \r\n");
-}
-else{
-	  HAL_Delay(10); // need time for status to update
-	  temp_ADDR = 0x180;
-	  p =  Read_Page_EEPROM(&device, temp_ADDR);
-	  temp_buffer[0] = *p << 8; //upper byte
-	  temp_buffer[1] = *(p+1);	//lower byte
-	  temp_buffer[3] = temp_buffer[0] | temp_buffer[1];
-
-
-	  // error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
-	  //temp_ADDR++;
-	  //temp_ADDR += 0x10;
-//	 error_check = HAL_I2C_Master_Receive(&hi2c1, S08_DEV_ID_ADDR_R, (uint8_t *)i2c_buffer, 1, HAL_MAX_DELAY);
-	  if(error_check != HAL_OK){
-		  strcpy((char*)uart_buf, " ERROR with receive \r\n");
-	  }
-	  else{
-		  //sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
-		  sprintf(uart_buf, "First Byte[2]: %d | Second Byte[3]: %d | F: %d\r\n ", temp_buffer[0], temp_buffer[1], temp_buffer[3]);
-
-	  }
-}
-
-
-
-	  //print to serial monitor
-HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
-
-
-*/
-
-
+	//CAN variables
+	uint8_t upper_byte = 0, lower_byte = 0;
+	uint16_t temp;
+	int negative_flag = 0;	//it is not negative
+	struct_CAN_Message Message = {0};
+	Message.CAN_ID = 0x99;
+	uint8_t new_index;
 
   /* USER CODE END 2 */
 
@@ -262,41 +265,64 @@ HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
   while (1)
   {
 
+	  if(new_index != -1){
 
-	 // error_check = S_Write_EEPROM(&device, temp_ADDR, data);
+		  sensor.x_values[new_index] = new_x_value;
+			if(Write_Page_EEPROM(&device, address, sensor.x_values[new_index]) != HAL_OK )
+				Error_Handler();
 
-/*
+			sensor.y_values[new_index] = new_y_value;
 
-	  if(error_check != HAL_OK){
-		  strcpy((char*)uart_buf, " ERROR with sending \r\n");
-	  }
-	  else{
-		  HAL_Delay(10); // need time for status to update
-	  	  error_check = S_Read_EEPROM(&device, temp_ADDR, (uint8_t*)&i2c_buffer[0]);
-	  	  temp_ADDR += 0x10;
-	  //	 error_check = HAL_I2C_Master_Receive(&hi2c1, S08_DEV_ID_ADDR_R, (uint8_t *)i2c_buffer, 1, HAL_MAX_DELAY);
-	  	  if(error_check != HAL_OK){
-	  		  strcpy((char*)uart_buf, " ERROR with receive \r\n");
-	  	  }
-	  	  else{
-	  		  sprintf(uart_buf, "EEPROM Response: 0x%02x \r\n", i2c_buffer[0]);
-	  	  }
+			if(Write_Page_EEPROM(&device, address, sensor.y_values[new_index]) != HAL_OK )
+					Error_Handler();
+
+		new_index = -1;
 	  }
 
-		  //print to serial monitor
-	HAL_UART_Transmit(&huart3, (uint8_t *)uart_buf, strlen(uart_buf), 100);
+	  HAL_ADC_Start(&hadc1);							//Enables ADC to start conversion
+	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);	//polls for regular conversion
+	  raw = HAL_ADC_GetValue(&hadc1);					// Gets the value from data register of regular channel and returns the raw adc value
+	  convert = converted_ADC_values(raw);				//converts the value to mV
+	  sensor.voltage = convert;							//store in sensor struct
+	  physical = VoltageToPhysValue(&sensor);			// converts to physical value
 
 
-*/
-	  //send through CAN after ADC values are parsed
+	  if(physical < 0){
+			physical *= -1;
+			negative_flag = 1;
+	  }
 
-	  //HAL_UART_Transmit(&huart3, (uint8_t *)adc_msg, strlen(adc_msg), HAL_MAX_DELAY);
+	  upper_byte = (physical & 0xFF00) >> 8;
+	  lower_byte = physical & 0xFF;
 
-	  HAL_Delay(1000);
+	  Message.CAN_Byte1 = upper_byte; //sending upper byte
+	  Message.CAN_Byte2 = lower_byte; //sending lower byte
+	  Message.CAN_Byte3 = negative_flag; //sending negative flag
+
+	  send_CAN(Message);
+	  negative_flag = 0;
+
+	  sprintf(adc_msg, "ADC VAL: %hu | mV Val: %hu | phys value: %ld\r\n",raw, convert, physical);
+
+	  HAL_UART_Transmit(&huart3, (uint8_t *)adc_msg, strlen(adc_msg), HAL_MAX_DELAY);
+
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
+
+
+  //from can_driver.c
+
+ 	 //test.CAN_Word1 = 0x10;
+ 	 //Message.CAN_Word3 = 0X10;
+ 	 //Message.CAN_Word5 = 'c';
+
+
+
+
+
   /* USER CODE END 3 */
 }
 

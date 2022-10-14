@@ -20,14 +20,14 @@ extern CAN_HandleTypeDef hcan1;
 typedef struct
 {
     uint16_t CAN_ID;
-    uint8_t CAN_Word1;
-    uint8_t CAN_Word2;
-    uint8_t CAN_Word3;
-    uint8_t CAN_Word4;
-    uint8_t CAN_Word5;
-    uint8_t CAN_Word6;
-    uint8_t CAN_Word7;
-    uint8_t CAN_Word8;
+    uint8_t CAN_Byte1;
+    uint8_t CAN_Byte2;
+    uint8_t CAN_Byte3;
+    uint8_t CAN_Byte4;
+    uint8_t CAN_Byte5;
+    uint8_t CAN_Byte6;
+    uint8_t CAN_Byte7;
+    uint8_t CAN_Byte8;
 }struct_CAN_Message;
 
 //CAN_FilterTypeDef canfilterconfig;

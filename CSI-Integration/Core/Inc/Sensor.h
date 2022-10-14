@@ -9,6 +9,7 @@
 #define INC_SENSOR_H_
 
 #include "main.h"
+#include "global.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -22,7 +23,8 @@
 
 typedef struct{
 	uint16_t 	x_values[32];
-	uint16_t 	y_values[32];
+	sint32 		y_values[32];
+	uint8_t 	prev_index;
 	uint16_t 	voltage;
 	uint32_t 	physValue;
 	uint32_t 	start_address;

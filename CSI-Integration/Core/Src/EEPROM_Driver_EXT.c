@@ -70,12 +70,15 @@ uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address){
 	temp[0] = dest_address >> 8; // most significant byte| A15:A8
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 
+
+	//make sure device is ready before transmitting
 	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);
 
 	if(HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 2, HAL_MAX_DELAY) != HAL_OK){
 		Error_Handler();
 	}
 
+	//make sure device is ready before transmitting
 	while(HAL_I2C_IsDeviceReady(device->i2cHandle1, id, 10, 100) != HAL_OK);
 
 	if(HAL_I2C_Master_Receive(device->i2cHandle1, id, data, 2, HAL_MAX_DELAY) != HAL_OK){
@@ -87,12 +90,16 @@ uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address){
 }
 
 
-/* Writing to Sensor */
+/*
+ * Writing all of the current Sensor structs' x and y values to the EEPROM
+ *
+ * */
 void write_ALL_EEPROM(struct_Sensor  sensor, S08 *device){
 
 	uint32_t address = sensor.start_address;
 
 
+	//writing to array of 32 points for the x values
 	for(int i = 0; i < 32; i++){
 		if(Write_Page_EEPROM(device, address, sensor.x_values[i]) != HAL_OK )
 			Error_Handler();
@@ -102,8 +109,11 @@ void write_ALL_EEPROM(struct_Sensor  sensor, S08 *device){
 	//maybe add the end address here to track
 
 	//address = sensor.end_address; //starting at 0x180
+
+	//increment for a different address for the y values
 	address += 5;
 
+	//writing to array of 32 points for the y values
 	for(int i = 0; i < 32; i++){
 		if(Write_Page_EEPROM(device, address, sensor.y_values[i]) != HAL_OK)
 			Error_Handler();
@@ -121,7 +131,7 @@ void read_ALL_EEPROM(struct_Sensor * sensor, S08 *device){
 	  uint8_t *p;
 	  uint32_t temp_buffer[3];
 
-
+	  //reading to array of 32 points for the x values
 	  for(int i = 0; i < 32; i++)
 	  {
 	  	  p =  Read_Page_EEPROM(device, address);
@@ -148,9 +158,6 @@ void read_ALL_EEPROM(struct_Sensor * sensor, S08 *device){
 	  	//address += 0x05;
 	  	address += 2;
 	  }
-
-
-
 
 }
 
@@ -193,6 +200,7 @@ HAL_StatusTypeDef S_Read_EEPROM(S08 *device, uint32_t dest_address, uint8_t *dat
 	temp[0] = dest_address >> 8; // most significant byte| A15:A8
 	temp[1] = dest_address & 0xFF; // least significant byte| A7:A0
 
+	//transmit a message to the address of the device it is trying to communicate to
 	bool = HAL_I2C_Master_Transmit(device->i2cHandle1, id, temp, 2, HAL_MAX_DELAY);
 
 	if(bool != HAL_OK){return HAL_ERROR;}

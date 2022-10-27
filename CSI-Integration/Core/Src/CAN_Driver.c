@@ -49,6 +49,38 @@ void send_CAN(struct_CAN_Message Msg)
     	Error_Handler();
     };
 }
+
+
+
+
+void change_Phys(void){
+
+	//CAN variables
+
+
+	uint16_t value_x = 100;
+	uint16_t value_y = 27;
+
+	uint8_t upper_byte_x = (value_x & 0xFF00) >> 8;	//need to keep it size of 1 byte
+	uint8_t lower_byte_x = value_x & 0x00FF;
+
+	uint8_t upper_byte_y = (value_y & 0xFF00) >> 8;	//need to keep it size of 1 byte
+	uint8_t lower_byte_y = value_y & 0x00FF;
+
+	int negative_flag = 0;	//it is not negative
+	struct_CAN_Message Message = {0};
+	Message.CAN_ID = 0x99;
+	Message.CAN_Byte1 = 1; //x index
+	Message.CAN_Byte2 = 1; //y index
+	Message.CAN_Byte3 = upper_byte_x;
+	Message.CAN_Byte4 = lower_byte_x;
+	Message.CAN_Byte5 = upper_byte_y;
+	Message.CAN_Byte6 = lower_byte_y;
+
+	send_CAN(Message);
+
+
+}
 //while( HAL_CAN_IsTxMessagePending(&hcan1, TxMailbox));
 
 

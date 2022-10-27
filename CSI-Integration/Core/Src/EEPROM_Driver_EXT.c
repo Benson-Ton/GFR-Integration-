@@ -94,14 +94,14 @@ uint8_t * Read_Page_EEPROM(S08 *device, uint32_t dest_address){
  * Writing all of the current Sensor structs' x and y values to the EEPROM
  *
  * */
-void write_ALL_EEPROM(struct_Sensor  sensor, S08 *device){
+void write_ALL_EEPROM(struct_Sensor * sensor, S08 *device){
 
-	uint32_t address = sensor.start_address;
+	uint32_t address = sensor->start_address;
 
 
 	//writing to array of 32 points for the x values
 	for(int i = 0; i < 32; i++){
-		if(Write_Page_EEPROM(device, address, sensor.x_values[i]) != HAL_OK )
+		if(Write_Page_EEPROM(device, address, sensor->x_values[i]) != HAL_OK )
 			Error_Handler();
 		//address += 0x05;
 		address += 2;
@@ -112,10 +112,11 @@ void write_ALL_EEPROM(struct_Sensor  sensor, S08 *device){
 
 	//increment for a different address for the y values
 	address += 5;
+	sensor->end_address = address;
 
 	//writing to array of 32 points for the y values
 	for(int i = 0; i < 32; i++){
-		if(Write_Page_EEPROM(device, address, sensor.y_values[i]) != HAL_OK)
+		if(Write_Page_EEPROM(device, address, sensor->y_values[i]) != HAL_OK)
 			Error_Handler();
 		//address += 0x05;
 		address += 2;
@@ -146,6 +147,7 @@ void read_ALL_EEPROM(struct_Sensor * sensor, S08 *device){
 
 	  //address = sensor->end_address; //starting at 0x180
 	  address += 5;
+	  sensor->end_address = address;
 
 	  for(int i = 0; i < 32; i++)
 	  {

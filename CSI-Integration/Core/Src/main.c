@@ -90,6 +90,9 @@ static void MX_I2C1_Init(void);
 #define ID_GET_config   0x700    //Dash Manager sends a new config to the CSI
 #define ID_SWITCH_5V_SW  ((0x604) | (CSI_config_ID<<4))
 
+//extern struct_Sensor sensor;
+//extern S08 device;
+
 
 CAN_TxHeaderTypeDef TxHeader;
 CAN_RxHeaderTypeDef RxHeader;
@@ -100,9 +103,12 @@ uint8_t TxData[8] = {0};
 uint8_t RxData[8] = {0};
 
 uint8_t new_index = -1;
-uint8_t new_x_value = 0, new_y_value = 0;
+
 
 uint8_t count = 0;
+
+struct_Sensor sensor;
+S08 device;
 
 //testing for EEPROM
 char uart_buf[50] = {0};
@@ -114,33 +120,52 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan1)
 {
 	HAL_CAN_GetRxMessage(hcan1, CAN_RX_FIFO0, &RxHeader, RxData);
 
-uint8_t x_value_byte1 = 0, x_value_byte2 = 0;
-uint8_t y_value_byte1 = 0, y_value_byte2 = 0;
-
+uint16_t x_value_byte1 = 0, x_value_byte2 = 0;
+uint16_t y_value_byte1 = 0, y_value_byte2 = 0;
+uint32_t address_X, address_Y;
+uint8_t X_new_index, Y_new_index;
+uint16_t new_x_value = 0;
+sint32 new_y_value = 0;
+//struct_Sensor sensor;
 
 
 	if(RxHeader.StdId == 0x99 ){
 
 
-		x_value_byte1 = RxData[1] << 8; //upper byte
-		x_value_byte2 = RxData[2]; //lower byte
+		x_value_byte1 = RxData[2] << 8; //upper byte
+		x_value_byte2 = RxData[3]; //lower byte
 
-		y_value_byte1 = RxData[3] << 8; //upper byte
-		y_value_byte2 = RxData[4]; // lower byte
+		y_value_byte1 = RxData[4] << 8; //upper byte
+		y_value_byte2 = RxData[5]; // lower byte
+
+		//obtaining x index
+		X_new_index = RxData[0];
+		address_X = X_new_index * 2;
+
+		//obtaining y index
+		Y_new_index = RxData[1];
+		address_Y = (Y_new_index * 2) + sensor.end_address;
+
+		new_x_value = x_value_byte1 | x_value_byte2;
+		new_y_value = y_value_byte1 | y_value_byte2;
 
 
-		new_index = RxData[0];
 
-		new_x_value = x_value_byte1 & x_value_byte2;
-		new_y_value = y_value_byte1 & y_value_byte2;
+		sensor.x_values[X_new_index] = new_x_value;
+		if(Write_Page_EEPROM(&device, address_X, sensor.x_values[X_new_index]) != HAL_OK )
+			Error_Handler();
 
-		count++;
+		sensor.y_values[Y_new_index] = new_y_value;
 
+		if(Write_Page_EEPROM(&device, address_Y, sensor.y_values[Y_new_index]) != HAL_OK )
+			Error_Handler();
+
+
+		read_ALL_EEPROM(&sensor, &device);
+		//serial_print_sensor_values(sensor);
 	}
 	//no changes
-	else{
-		new_index = -1;
-	}
+
 	//count++;
 }//test code for loopback mode
 
@@ -181,14 +206,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-// setting up the CAN frame
-  /*
-  TxHeader.DLC = 8; // bye in length, 8 bytes stated in line 94(CAN_Driver.c)
-  TxHeader.ExtId = 0; // Specifies the extended identifier. This parameter must be a number between Min_Data = 0 and Max_Data = 0x1FFFFFFF.
-  TxHeader.IDE = CAN_ID_STD; // set the identifier to standard
-  TxHeader.RTR = CAN_RTR_DATA; // set to allow for remote transmission requests
-  TxHeader.StdId = 0x100; // set the standard identifier to 256 (Field Nodes cannot access anything higher than 255 for their addresses)
-*/
+
 
   HAL_CAN_Start(&hcan1); // start communicating with CANBUS and cant reconfigure CAN settings
 
@@ -196,48 +214,18 @@ int main(void)
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 
 
-
-
-//  //from can_driver.c
-// struct_CAN_Message test = {0};
-// test.CAN_ID = 0x01;
-// //test.CAN_Word1 = 0x10;
-// test.CAN_Word3 = 0X10;
-// test.CAN_Word5 = 'c';
-//
-// send_CAN(test);
-
-   // TxData[0] = 0x01;
-   // TxData[1] = 0x02;
-  //  TxData[2] = 0x03;
-   // TxData[3] = 0x04;
-  //  TxData[0] = 0xf3;
-   // TxData[1] = (uint8_t *)ID_CONFIG_CSI;
-    //send message through CAN
-   // HAL_CAN_AddTxMessage(&hcan1, &TxHeader, TxData, &TxMailbox); //Add a message to the first free Tx mailbox and activate the corresponding transmission request
-
-//adc variables
-//uint16_t raw;
-//uint16_t converted_val;
-//char adc_msg[15];
-
-//CAN and EEPROM variables
-//struct_CAN_Message msg = {0};
-S08 device;
-
-uint16_t temp_ADDR = 0x00;
 HAL_StatusTypeDef error_check = HAL_OK;
 
 initialize_EEPROM(&device, &hi2c1);
 
 
 //initialize Sensor
-struct_Sensor sensor = {0};
+//struct_Sensor sensor = {0};
 init_sensor(&sensor); //assigning the default values for sensors to the EEPROM
 
 
 
-//write_ALL_EEPROM(sensor, &device);
+write_ALL_EEPROM(&sensor, &device);
 read_ALL_EEPROM(&sensor, &device);
 serial_print_sensor_values(sensor);
 
@@ -252,11 +240,33 @@ serial_print_sensor_values(sensor);
 
 	//CAN variables
 	uint8_t upper_byte = 0, lower_byte = 0;
-	uint16_t temp;
+
+	uint16_t value_x = 100;
+	uint16_t value_y = 27;
+
+	uint8_t upper_byte_x = (value_x & 0xFF00) >> 8;	//need to keep it size of 1 byte
+	uint8_t lower_byte_x = value_x & 0x00FF;
+
+	uint8_t upper_byte_y = (value_y & 0xFF00) >> 8;	//need to keep it size of 1 byte
+	uint8_t lower_byte_y = value_y & 0x00FF;
+
 	int negative_flag = 0;	//it is not negative
 	struct_CAN_Message Message = {0};
 	Message.CAN_ID = 0x99;
-	uint8_t new_index;
+	Message.CAN_Byte1 = 1; //x index
+	Message.CAN_Byte2 = 1; //y index
+	Message.CAN_Byte3 = upper_byte_x;
+	Message.CAN_Byte4 = lower_byte_x;
+	Message.CAN_Byte5 = upper_byte_y;
+	Message.CAN_Byte6 = lower_byte_y;
+
+	send_CAN(Message);
+
+	struct_CAN_Message Message2 = {0};
+
+
+	//HAL_Delay(1);
+
 
   /* USER CODE END 2 */
 
@@ -265,26 +275,12 @@ serial_print_sensor_values(sensor);
   while (1)
   {
 
-	  if(new_index != -1){
-
-		  sensor.x_values[new_index] = new_x_value;
-			if(Write_Page_EEPROM(&device, address, sensor.x_values[new_index]) != HAL_OK )
-				Error_Handler();
-
-			sensor.y_values[new_index] = new_y_value;
-
-			if(Write_Page_EEPROM(&device, address, sensor.y_values[new_index]) != HAL_OK )
-					Error_Handler();
-
-		new_index = -1;
-	  }
-
 	  HAL_ADC_Start(&hadc1);							//Enables ADC to start conversion
 	  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);	//polls for regular conversion
 	  raw = HAL_ADC_GetValue(&hadc1);					// Gets the value from data register of regular channel and returns the raw adc value
 	  convert = converted_ADC_values(raw);				//converts the value to mV
 	  sensor.voltage = convert;							//store in sensor struct
-	  physical = VoltageToPhysValue(&sensor);			// converts to physical value
+	  physical = VoltageToPhysValue();			// converts to physical value
 
 
 	  if(physical < 0){
@@ -294,17 +290,17 @@ serial_print_sensor_values(sensor);
 
 	  upper_byte = (physical & 0xFF00) >> 8;
 	  lower_byte = physical & 0xFF;
+	  Message2.CAN_ID = 0x10;
+	  Message2.CAN_Byte1 = upper_byte; //sending upper byte
+	  Message2.CAN_Byte2 = lower_byte; //sending lower byte
+	  Message2.CAN_Byte3 = negative_flag; //sending negative flag
 
-	  Message.CAN_Byte1 = upper_byte; //sending upper byte
-	  Message.CAN_Byte2 = lower_byte; //sending lower byte
-	  Message.CAN_Byte3 = negative_flag; //sending negative flag
-
-	  send_CAN(Message);
+	  send_CAN(Message2);
 	  negative_flag = 0;
 
 	  sprintf(adc_msg, "ADC VAL: %hu | mV Val: %hu | phys value: %ld\r\n",raw, convert, physical);
 
-	  HAL_UART_Transmit(&huart3, (uint8_t *)adc_msg, strlen(adc_msg), HAL_MAX_DELAY);
+	 HAL_UART_Transmit(&huart3, (uint8_t *)adc_msg, strlen(adc_msg), HAL_MAX_DELAY);
 
 	  HAL_Delay(500);
     /* USER CODE END WHILE */

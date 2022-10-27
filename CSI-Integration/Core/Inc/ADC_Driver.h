@@ -14,9 +14,11 @@
 #include "global.h"
 #include "sensor.h"
 
+extern struct_Sensor sensor;
+
 int converted_ADC_values(uint32_t raw_ADC_val);
 
-sint32 VoltageToPhysValue(struct_Sensor *sensor);
+sint32 VoltageToPhysValue(void );
 
 
 #endif /* INC_ADC_DRIVER_H_ */
